@@ -11,16 +11,23 @@ class SocketClient:
         self.port = port
         self.nick = input("Choose your nickname: ")
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.run_client = True
         # Connect to server
         self.s.connect((SERVER_HOST, SERVER_PORT))
 
     def receive_message(self):
-        while True:
+        while True and self.run_client:
             try:
                 # Receive message from server
                 message = self.s.recv(1024).decode('ascii')
+                if message == 'ACK!':
+                    continue
                 if message == 'NICK':
                     self.s.send(self.nick.encode('ascii'))
+                if message == 'KICK!':   
+                    print("You were kicked from the server!")
+                    self.run_client = False
+                    break
                 else:
                     print(f'{message}')
             except Exception as e:
@@ -31,7 +38,7 @@ class SocketClient:
                 break
 
     def send_message(self):
-        while True:
+        while True and self.run_client:
             try:
                 # Send message to server
                 message = f'{self.nick}: {input("Type your message:")}'
@@ -49,6 +56,13 @@ class SocketClient:
         receive_thread.start()
         send_thread = threading.Thread(target=self.send_message)
         send_thread.start()
+
+        # Wait until threads are finished
+        receive_thread.join()
+        send_thread.join()
+
+        # Close socket
+        self.s.close()
 
 if __name__ == "__main__":
     client = SocketClient(SERVER_HOST, SERVER_PORT)

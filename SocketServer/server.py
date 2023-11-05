@@ -45,22 +45,32 @@ class SocketServer:
                 self.broadcast(f'{nickname} left the chat!'.encode('ascii'))
                 self.nicknames.remove(nickname)
                 break
+        
             
     def accept_connections(self):
-        while True:
-            # Accept client connection
-            client_socket, client_address = self.s.accept()
-            print(f"[*] Accepted connection from {client_address[0]}:{client_address[1]}")
-            client_socket.send("NICK".encode('ascii'))
-            nickname = client_socket.recv(1024).decode('ascii')
-            self.nicknames.append(nickname)
-            self.clients.append(client_socket) 
-            print(f"[*] Nickname of the client is {nickname}")
-            self.broadcast(f"{nickname} joined the chat!".encode('ascii'))
-            client_socket.send("Connected to the server!".encode('ascii'))
-            # Start handling thread for client
-            thread = threading.Thread(target=self.handle_client_connection, args=(client_socket,))
-            thread.start()
+        try:
+            while True:
+                # Accept client connection
+                client_socket, client_address = self.s.accept()
+                print(f"[*] Accepted connection from {client_address[0]}:{client_address[1]}")
+                client_socket.send("NICK".encode('ascii'))
+                nickname = client_socket.recv(1024).decode('ascii')
+                self.nicknames.append(nickname)
+                self.clients.append(client_socket) 
+                print(f"[*] Nickname of the client is {nickname}")
+                self.broadcast(f"{nickname} joined the chat!".encode('ascii'))
+                client_socket.send("Connected to the server!".encode('ascii'))
+                # Start handling thread for client
+                thread = threading.Thread(target=self.handle_client_connection, args=(client_socket,))
+                thread.start()
+        except KeyboardInterrupt as e:
+            print(e)
+            print("[*] Closing server...")
+            self.broadcast("KICK!".encode('ascii'))
+            for client_socket in self.clients:
+                self.broadcast("Server is shutting down!".encode('ascii'))
+                client_socket.close()
+            self.s.close()
 
 if __name__ == "__main__":
     server = SocketServer(SERVER_HOST, SERVER_PORT)
